@@ -30,7 +30,7 @@ interface Match {
 
 export default function DashboardPage() {
   const { user, token } = useAuth();
-  const { matchUpdates } = useWebSocket();
+  const { matchUpdates, liveMatches } = useWebSocket();
   const searchParams = useSearchParams();
   const [matches, setMatches] = useState<Match[]>([]);
   const [loading, setLoading] = useState(true);
@@ -39,9 +39,28 @@ export default function DashboardPage() {
 
   useEffect(() => {
     if (token) {
-      fetchMatches();
+      if (statusFilter === 'live') {
+        // For live matches, use WebSocket data
+        if (liveMatches && liveMatches.length > 0) {
+          setMatches(liveMatches as Match[]);
+          setLoading(false);
+        } else {
+          // Fallback to API if WebSocket hasn't loaded yet
+          fetchMatches();
+        }
+      } else {
+        fetchMatches();
+      }
     }
   }, [token, statusFilter]);
+
+  // Update live matches from WebSocket
+  useEffect(() => {
+    if (statusFilter === 'live' && liveMatches) {
+      setMatches(liveMatches as Match[]);
+      setLoading(false);
+    }
+  }, [liveMatches, statusFilter]);
 
   // Update matches when WebSocket receives updates
   useEffect(() => {
@@ -54,7 +73,8 @@ export default function DashboardPage() {
               ...match,
               score: update.score || match.score,
               status: update.status || match.status,
-              odds: update.odds || match.odds
+              odds: update.odds || match.odds,
+              liveEvents: update.events || match.liveEvents
             };
           }
           return match;
@@ -170,7 +190,7 @@ export default function DashboardPage() {
                         {match.country} • {match.league}
                       </span>
                       {match.status === 'live' && (
-                        <span className="bg-red-600 text-white text-xs px-2 py-1 rounded">
+                        <span className="bg-red-600 text-white text-xs px-2 py-1 rounded animate-pulse">
                           LIVE
                         </span>
                       )}
@@ -186,6 +206,11 @@ export default function DashboardPage() {
                           <p className="text-2xl font-bold text-accent-green">
                             {match.score.home} - {match.score.away}
                           </p>
+                          {matchUpdates[match.id]?.matchMinute && (
+                            <p className="text-gray-400 text-xs mt-1">
+                              Min {matchUpdates[match.id].matchMinute}
+                            </p>
+                          )}
                         </div>
                       )}
                     </div>

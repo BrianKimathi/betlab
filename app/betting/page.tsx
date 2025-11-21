@@ -202,6 +202,10 @@ export default function BettingPage() {
                           `First Goal Scorer: ${bet.selection.player}`}
                         {bet.betType === 'doubleChance' &&
                           `Double Chance: ${bet.selection}`}
+                        {bet.betType === 'penalty' &&
+                          `Penalty: ${bet.selection === 'yes' ? 'Awarded' : bet.selection === 'no' ? 'No Penalty' : bet.selection === 'home' ? `${bet.match.homeTeam} Penalty` : `${bet.match.awayTeam} Penalty`}`}
+                        {bet.betType === 'penaltyInTime' &&
+                          `Penalty in Min ${bet.selection.timeWindow.start}-${bet.selection.timeWindow.end}`}
                       </p>
                       <p className="text-accent-green font-bold mt-2">Odds: {bet.odds.toFixed(2)}</p>
                       {totalStake && (
