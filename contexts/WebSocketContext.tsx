@@ -2,7 +2,29 @@
 
 import React, { createContext, useContext, useEffect, useState, useRef } from 'react';
 
-const WS_URL = process.env.NEXT_PUBLIC_WS_URL || 'wss://betlab-backend.onrender.com';
+// Determine WebSocket URL based on environment
+const getWebSocketUrl = () => {
+  // If explicitly set in env, use it
+  if (process.env.NEXT_PUBLIC_WS_URL) {
+    return process.env.NEXT_PUBLIC_WS_URL;
+  }
+  
+  // Check if we're in development (localhost)
+  if (typeof window !== 'undefined') {
+    const isLocalhost = window.location.hostname === 'localhost' || 
+                        window.location.hostname === '127.0.0.1';
+    
+    if (isLocalhost) {
+      // Use ws:// for local development
+      return 'ws://localhost:5000';
+    }
+  }
+  
+  // Default to production WebSocket URL
+  return 'wss://betlab-backend.onrender.com';
+};
+
+const WS_URL = getWebSocketUrl();
 
 interface WebSocketContextType {
   socket: WebSocket | null;
@@ -53,8 +75,11 @@ export function WebSocketProvider({ children }: { children: React.ReactNode }) {
       }
 
       isConnectingRef.current = true;
-      const ws = new WebSocket(WS_URL);
-      wsRef.current = ws;
+      console.log('Attempting WebSocket connection to:', WS_URL);
+      
+      try {
+        const ws = new WebSocket(WS_URL);
+        wsRef.current = ws;
 
       ws.onopen = () => {
         if (!mountedRef.current) {
@@ -149,14 +174,35 @@ export function WebSocketProvider({ children }: { children: React.ReactNode }) {
       };
 
       ws.onerror = (error) => {
+        // Suppress browser extension errors (they're not real errors)
+        const errorMessage = error?.message || '';
+        if (errorMessage.includes('Receiving end does not exist') || 
+            errorMessage.includes('message channel closed')) {
+          // These are browser extension errors, ignore them
+          return;
+        }
+        
         console.error('WebSocket error:', error);
+        console.error('WebSocket URL:', WS_URL);
         isConnectingRef.current = false;
       };
 
       ws.onclose = (event) => {
         if (!mountedRef.current) return;
         
-        console.log('WebSocket disconnected', event.code, event.reason);
+        // Error code 1006 = abnormal closure (connection lost)
+        // Error code 1000 = normal closure
+        // Error code 1001 = going away
+        if (event.code === 1006) {
+          console.warn('WebSocket disconnected abnormally (1006). This usually means:');
+          console.warn('1. Server is not running');
+          console.warn('2. Network connection lost');
+          console.warn('3. WebSocket URL is incorrect:', WS_URL);
+          console.warn('Attempting to reconnect in 3 seconds...');
+        } else {
+          console.log('WebSocket disconnected', event.code, event.reason || '');
+        }
+        
         isConnectingRef.current = false;
         setSocket(null);
         wsRef.current = null;
@@ -168,13 +214,31 @@ export function WebSocketProvider({ children }: { children: React.ReactNode }) {
             clearTimeout(reconnectTimeoutRef.current);
           }
           
+          // Exponential backoff for reconnection
+          const reconnectDelay = 3000;
+          reconnectTimeoutRef.current = setTimeout(() => {
+            if (mountedRef.current && shouldReconnectRef.current) {
+              console.log('Attempting WebSocket reconnection...');
+              connect();
+            }
+          }, reconnectDelay);
+        }
+      };
+      
+      } catch (error) {
+        console.error('Failed to create WebSocket:', error);
+        isConnectingRef.current = false;
+        wsRef.current = null;
+        
+        // Retry after delay
+        if (shouldReconnectRef.current && mountedRef.current) {
           reconnectTimeoutRef.current = setTimeout(() => {
             if (mountedRef.current && shouldReconnectRef.current) {
               connect();
             }
           }, 3000);
         }
-      };
+      }
     };
 
     // Small delay to ensure component is fully mounted
