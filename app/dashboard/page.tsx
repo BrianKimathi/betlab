@@ -9,7 +9,7 @@ import axios from 'axios';
 import Link from 'next/link';
 import { FiClock, FiChevronRight } from 'react-icons/fi';
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api';
+const API_URL = process.env.NEXT_PUBLIC_API_URL || 'https://betlab-backend.onrender.com/api';
 
 interface Match {
   id: string;
@@ -37,26 +37,17 @@ export default function DashboardPage() {
   const [activeTab, setActiveTab] = useState('highlights');
   const statusFilter = searchParams.get('status');
 
+  // Fetch matches from API
   useEffect(() => {
     if (token) {
-      if (statusFilter === 'live') {
-        // For live matches, use WebSocket data
-        if (liveMatches && liveMatches.length > 0) {
-          setMatches(liveMatches as Match[]);
-          setLoading(false);
-        } else {
-          // Fallback to API if WebSocket hasn't loaded yet
-          fetchMatches();
-        }
-      } else {
-        fetchMatches();
-      }
+      fetchMatches();
     }
   }, [token, statusFilter]);
 
-  // Update live matches from WebSocket
+  // Update with WebSocket live matches when available (for live filter)
   useEffect(() => {
-    if (statusFilter === 'live' && liveMatches) {
+    if (statusFilter === 'live' && liveMatches && liveMatches.length > 0) {
+      console.log('✅ Updating with WebSocket live matches:', liveMatches.length);
       setMatches(liveMatches as Match[]);
       setLoading(false);
     }
@@ -88,10 +79,21 @@ export default function DashboardPage() {
       const url = statusFilter === 'live' 
         ? `${API_URL}/matches/live/all`
         : `${API_URL}/matches`;
+      console.log('📡 Fetching matches from:', url);
       const response = await axios.get(url);
-      setMatches(response.data);
+      const fetchedMatches = response.data;
+      console.log(`✅ Fetched ${fetchedMatches.length} matches from API`);
+      
+      // For live matches, ensure we only show live status matches
+      if (statusFilter === 'live') {
+        const liveOnly = fetchedMatches.filter((m: Match) => m.status === 'live');
+        console.log(`📊 Filtered to ${liveOnly.length} live matches`);
+        setMatches(liveOnly);
+      } else {
+        setMatches(fetchedMatches);
+      }
     } catch (error) {
-      console.error('Failed to fetch matches:', error);
+      console.error('❌ Failed to fetch matches:', error);
     } finally {
       setLoading(false);
     }
@@ -110,11 +112,22 @@ export default function DashboardPage() {
     return null;
   }
 
+  // Filter matches based on active tab (when not using status filter)
+  const filteredMatches = statusFilter === 'live' 
+    ? matches.filter(m => m.status === 'live')
+    : activeTab === 'highlights'
+    ? matches.slice(0, 10)
+    : activeTab === 'upcoming'
+    ? matches.filter(m => m.status === 'upcoming')
+    : activeTab === 'live'
+    ? matches.filter(m => m.status === 'live')
+    : matches;
+
   return (
     <Layout>
       <div className="p-6">
-        {/* Balance Display */}
-        <div className="mb-6 p-4 bg-primary-light rounded-lg border border-gray-800">
+        <div className="mb-6">
+          <h1 className="text-3xl font-bold mb-2">Dashboard</h1>
           <div className="flex items-center justify-between">
             <div>
               <p className="text-gray-400 text-sm">Account Balance</p>
@@ -172,13 +185,18 @@ export default function DashboardPage() {
           <div className="flex justify-center items-center py-20">
             <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-accent-green"></div>
           </div>
-        ) : matches.length === 0 ? (
+        ) : filteredMatches.length === 0 ? (
           <div className="text-center py-20 text-gray-400">
             <p>No matches available at the moment</p>
+            {statusFilter === 'live' && (
+              <p className="text-sm mt-2">
+                Waiting for live matches... (Check console for WebSocket updates)
+              </p>
+            )}
           </div>
         ) : (
           <div className="space-y-4">
-            {matches.map((match) => (
+            {filteredMatches.map((match) => (
               <div
                 key={match.id}
                 className="bg-primary-light rounded-lg border border-gray-800 p-4 hover:border-accent-green transition"
@@ -280,4 +298,3 @@ export default function DashboardPage() {
     </Layout>
   );
 }
-

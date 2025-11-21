@@ -9,7 +9,7 @@ import { useWebSocket } from '@/contexts/WebSocketContext';
 import axios from 'axios';
 import { FiArrowLeft, FiStar, FiInfo, FiClock } from 'react-icons/fi';
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api';
+const API_URL = process.env.NEXT_PUBLIC_API_URL || 'https://betlab-backend.onrender.com/api';
 
 interface Match {
   id: string;

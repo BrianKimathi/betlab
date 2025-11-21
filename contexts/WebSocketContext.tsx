@@ -2,7 +2,7 @@
 
 import React, { createContext, useContext, useEffect, useState, useRef } from 'react';
 
-const WS_URL = process.env.NEXT_PUBLIC_WS_URL || 'ws://localhost:5000';
+const WS_URL = process.env.NEXT_PUBLIC_WS_URL || 'wss://betlab-backend.onrender.com';
 
 interface WebSocketContextType {
   socket: WebSocket | null;

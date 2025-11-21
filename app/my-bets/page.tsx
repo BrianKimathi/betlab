@@ -6,7 +6,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import axios from 'axios';
 import { FiClock, FiCheckCircle, FiXCircle } from 'react-icons/fi';
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api';
+const API_URL = process.env.NEXT_PUBLIC_API_URL || 'https://betlab-backend.onrender.com/api';
 
 interface Bet {
   id: string;

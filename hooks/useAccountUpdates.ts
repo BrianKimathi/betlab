@@ -3,7 +3,7 @@
 import { useEffect } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 
-const WS_URL = process.env.NEXT_PUBLIC_WS_URL || 'ws://localhost:5000';
+const WS_URL = process.env.NEXT_PUBLIC_WS_URL || 'wss://betlab-backend.onrender.com';
 
 export function useAccountUpdates() {
   const { user, updateBalance } = useAuth();

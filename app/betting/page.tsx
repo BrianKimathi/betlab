@@ -8,7 +8,7 @@ import { useBetslip } from '@/contexts/BetslipContext';
 import axios from 'axios';
 import { FiX } from 'react-icons/fi';
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api';
+const API_URL = process.env.NEXT_PUBLIC_API_URL || 'https://betlab-backend.onrender.com/api';
 
 export default function BettingPage() {
   const { user, token, updateBalance } = useAuth();
