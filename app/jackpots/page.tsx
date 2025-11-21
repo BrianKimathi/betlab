@@ -24,12 +24,39 @@ export default function JackpotsPage() {
   const [loading, setLoading] = useState(true);
   const [selectedJackpot, setSelectedJackpot] = useState<string | null>(null);
   const [selectedMatches, setSelectedMatches] = useState<{ [key: string]: string }>({});
+  const [timeRemaining, setTimeRemaining] = useState<{ days: number; hours: number; mins: number; secs: number } | null>(null);
 
   useEffect(() => {
     if (token) {
       fetchJackpots();
     }
   }, [token]);
+
+  const selectedJackpotData = jackpots.find(j => j.id === selectedJackpot);
+
+  // Real-time countdown timer
+  useEffect(() => {
+    const currentJackpot = jackpots.find(j => j.id === selectedJackpot);
+    if (!currentJackpot) {
+      setTimeRemaining(null);
+      return;
+    }
+
+    const updateCountdown = () => {
+      const jackpot = jackpots.find(j => j.id === selectedJackpot);
+      if (jackpot) {
+        setTimeRemaining(calculateTimeRemaining(jackpot.expiresAt));
+      }
+    };
+
+    // Update immediately
+    updateCountdown();
+
+    // Update every second
+    const interval = setInterval(updateCountdown, 1000);
+
+    return () => clearInterval(interval);
+  }, [selectedJackpot, jackpots]);
 
   const fetchJackpots = async () => {
     try {
@@ -75,8 +102,6 @@ export default function JackpotsPage() {
       [matchId]: selection
     });
   };
-
-  const selectedJackpotData = jackpots.find(j => j.id === selectedJackpot);
 
   if (!user) {
     return null;
@@ -129,29 +154,45 @@ export default function JackpotsPage() {
                     <div className="text-right">
                       <div className="bg-white/20 rounded-lg p-4 mb-2">
                         <p className="text-white text-sm mb-1">Time Remaining</p>
-                        {(() => {
-                          const time = calculateTimeRemaining(selectedJackpotData.expiresAt);
-                          return (
-                            <div className="flex space-x-2 text-white">
-                              <div>
-                                <p className="text-2xl font-bold">{time.days}</p>
-                                <p className="text-xs">Days</p>
-                              </div>
-                              <div>
-                                <p className="text-2xl font-bold">{time.hours}</p>
-                                <p className="text-xs">Hours</p>
-                              </div>
-                              <div>
-                                <p className="text-2xl font-bold">{time.mins}</p>
-                                <p className="text-xs">Mins</p>
-                              </div>
-                              <div>
-                                <p className="text-2xl font-bold">{time.secs}</p>
-                                <p className="text-xs">Secs</p>
-                              </div>
+                        {timeRemaining ? (
+                          <div className="flex space-x-2 text-white">
+                            <div>
+                              <p className="text-2xl font-bold">{timeRemaining.days}</p>
+                              <p className="text-xs">Days</p>
                             </div>
-                          );
-                        })()}
+                            <div>
+                              <p className="text-2xl font-bold">{timeRemaining.hours}</p>
+                              <p className="text-xs">Hours</p>
+                            </div>
+                            <div>
+                              <p className="text-2xl font-bold">{timeRemaining.mins}</p>
+                              <p className="text-xs">Mins</p>
+                            </div>
+                            <div>
+                              <p className="text-2xl font-bold">{timeRemaining.secs}</p>
+                              <p className="text-xs">Secs</p>
+                            </div>
+                          </div>
+                        ) : (
+                          <div className="flex space-x-2 text-white">
+                            <div>
+                              <p className="text-2xl font-bold">0</p>
+                              <p className="text-xs">Days</p>
+                            </div>
+                            <div>
+                              <p className="text-2xl font-bold">0</p>
+                              <p className="text-xs">Hours</p>
+                            </div>
+                            <div>
+                              <p className="text-2xl font-bold">0</p>
+                              <p className="text-xs">Mins</p>
+                            </div>
+                            <div>
+                              <p className="text-2xl font-bold">0</p>
+                              <p className="text-xs">Secs</p>
+                            </div>
+                          </div>
+                        )}
                       </div>
                       <button className="bg-white text-accent-green px-6 py-2 rounded font-semibold hover:bg-green-50 transition">
                         {selectedJackpotData.stake} BOB
